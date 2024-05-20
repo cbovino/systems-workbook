@@ -13,6 +13,8 @@
  * case it's OK.  
  */
 
+#include <string.h>
+
 #if 0
 /*
  * Instructions to Students:
@@ -295,7 +297,27 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+    unsigned sign = uf & 0x80000000; // Extract sign
+    unsigned exp = (uf >> 23) & 0xFF; // Extract exponent
+    unsigned frac = uf & 0x7FFFFF; // Extract fraction
+
+    if (exp == 0xFF) {
+        // uf is NaN or infinity, return uf
+        return uf;
+    } else if (exp == 0) {
+        // uf is denormalized, just shift fraction
+        return sign | (frac << 1);
+    } else {
+        // uf is normalized, increment exponent
+        exp++;
+        if (exp == 0xFF) {
+            // Overflow, return infinity with same sign as uf
+            return sign | 0x7F800000;
+        } else {
+            // Return result
+            return sign | (exp << 23) | frac;
+        }
+    }
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -310,7 +332,20 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+    unsigned sign = uf & 0x80000000; // Extract sign
+    unsigned exp = (uf >> 23) & 0xFF; // Extract exponent
+    unsigned frac = uf & 0x7FFFFF; // Extract fraction
+
+    if (exp == 0xFF) {
+        // uf is NaN or infinity, return uf
+        return 0x80000000u;
+    } else if (exp == 0) {
+        return (int) (frac >> 23);
+    } else {
+        return (exp > 32) ? (frac << 31) : (frac << exp);
+    }
+
+
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x

@@ -147,8 +147,13 @@ NOTES:
  * 
  * x ^ y 
  * 
- * 0101
- * 1010
+ * 0101 & ~1010
+ * 0101 & 0101 -> 1111
+ * 
+ * ~0101 & 1010
+ * 1010 & 1010 -> 1111
+ * 
+ * 
  * results in 1111
  * 
  * 1011 0100
@@ -180,11 +185,8 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  int byteSize = ((1 << 31)+ 1)* -1;
-  if(x == byteSize){
-    return 1;
-  }
-  return 0;
+  int maxU = (1 << 31) - 1;
+  return !(maxU - x);
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -195,8 +197,9 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  int mask = 0xAAAAAAAA;
-   return ((x & mask) == mask) ? 1 : 0;
+  int mask = 0xAAAAAAAA; // 10101010101010101010101010101010
+  int result = (x & mask) ^ mask; // 
+  return !result;
 }
 /* 
  * negate - return -x 
@@ -206,7 +209,7 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return -x;
+  return ~x + 1;
 }
 //3
 /* 
@@ -219,10 +222,12 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  if(0x30 <= x && x <= 0x39 ){
-    return 1;
-  }
-  return 0;
+  int lower  = (x-0x30);
+  int upper = (0x39 - x);
+  int op = !(x >> 31); // zero if is negative
+  int lowerOp = !(lower >> 31); // zero if lower bound negative 
+  int upperOp = !(upper >> 31); // zero if upper bound negative 
+  return op & lowerOp & upperOp;
 }
 /* 
  * conditional - same as x ? y : z 
@@ -232,20 +237,20 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return (x ? y : z);
+  int xbool = !!x;
+  int val = (xbool << 31) >> 31; // If x is true, val will be all 1's, otherwise all 0's
+  return (val & y) | (~val & z); // Use bitwise AND and OR to select y or z based on val
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
  *   Example: isLessOrEqual(4,5) = 1.
  *   Legal ops: ! ~ & ^ | + << >>
- *   Max ops: 24
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  if(x <= y){
-    return 1;
-  } 
-  return 0;
+  int sub = (y - x);
+  int signedBit = (sub >> 31);
+  return !signedBit;
 }
 //4
 /* 
@@ -257,10 +262,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  if(x == 0x0){
-    return 1;
-  }
-  return 0;
+  return !(~0x0 & x);
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -300,24 +302,6 @@ unsigned floatScale2(unsigned uf) {
     unsigned sign = uf & 0x80000000; // Extract sign
     unsigned exp = (uf >> 23) & 0xFF; // Extract exponent
     unsigned frac = uf & 0x7FFFFF; // Extract fraction
-
-    if (exp == 0xFF) {
-        // uf is NaN or infinity, return uf
-        return uf;
-    } else if (exp == 0) {
-        // uf is denormalized, just shift fraction
-        return sign | (frac << 1);
-    } else {
-        // uf is normalized, increment exponent
-        exp++;
-        if (exp == 0xFF) {
-            // Overflow, return infinity with same sign as uf
-            return sign | 0x7F800000;
-        } else {
-            // Return result
-            return sign | (exp << 23) | frac;
-        }
-    }
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -332,19 +316,6 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-    unsigned sign = uf & 0x80000000; // Extract sign
-    unsigned exp = (uf >> 23) & 0xFF; // Extract exponent
-    unsigned frac = uf & 0x7FFFFF; // Extract fraction
-
-    if (exp == 0xFF) {
-        // uf is NaN or infinity, return uf
-        return 0x80000000u;
-    } else if (exp == 0) {
-        return (int) (frac >> 23);
-    } else {
-        return (exp > 32) ? (frac << 31) : (frac << exp);
-    }
-
 
 }
 /* 

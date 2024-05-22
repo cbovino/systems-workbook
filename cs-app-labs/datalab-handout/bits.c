@@ -272,19 +272,28 @@ int logicalNeg(int x) {
  *            howManyBits(0)  = 1
  *            howManyBits(-1) = 1
  *            howManyBits(0x80000000) = 32
+ * solution from here : https://github.com/haohuaijin/CSAPP-Lab/blob/main/1.datalab/bits.c
  *  Legal ops: ! ~ & ^ | + << >>
  *  Max ops: 90
  *  Rating: 4
  */
 int howManyBits(int x) {
-  // if negative, take the inverse, bit amount will still be the same and it'll be positive
-  int num = x < 0 ? ~x : x;
-  int bits = 1;
-  while(num > 0){
-    num = num >> 1;
-    bits +=1;
-  }
-  return bits;
+    int b16, b8, b4, b2, b1, b0;
+    int symbol = (x >> 31);
+    x = (symbol & ~x) | (~symbol & x);
+
+    b16 = !!(x >> 16) << 4;
+    x = x >> b16;
+    b8 = !!(x >> 8) << 3;
+    x = x >> b8;
+    b4 = !!(x >> 4) << 2;
+    x = x >> b4;
+    b2 = !!(x >> 2) << 1;
+    x = x >> b2;
+    b1 = !!(x >> 1);
+    x = x >> b1;
+    b0 = x;
+    return b16 + b8 + b4 + b2 + b1 + b0 + 1;
 }
 //float
 /* 
@@ -295,13 +304,18 @@ int howManyBits(int x) {
  *   single-precision floating point values.
  *   When argument is NaN, return argument
  *   Legal ops: Any integer/unsigned operations incl. ||, &&. also if, while
+ * https://github.com/Zhenye-Na/CSAPP-Labs/blob/master/labs/Lab1-Data%20Lab/datalab/bits.c
  *   Max ops: 30
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-    unsigned sign = uf & 0x80000000; // Extract sign
-    unsigned exp = (uf >> 23) & 0xFF; // Extract exponent
-    unsigned frac = uf & 0x7FFFFF; // Extract fraction
+  int signMask = (1 << 31);
+  if ((uf & (~signMask)) >= (0xFF << 23)) {
+      return uf;
+  } else if ((uf & (0xFF << 23)) == 0) {
+      return (uf & ~(0x1FF << 23)) << 1 | (uf & signMask);
+  }
+  return uf + (1 << 23);
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -315,7 +329,15 @@ unsigned floatScale2(unsigned uf) {
  *   Max ops: 30
  *   Rating: 4
  */
+
 int floatFloat2Int(unsigned uf) {
+
+  unsigned sign = uf & 0x80000000; // Extract sign
+  unsigned exp = (uf >> 23) & 0xFF; // Extract exponent
+  unsigned frac = uf & 0x7FFFFF; // Extract fraction
+
+  // Combine the updated sign, exponent, and fraction to form the result
+  return (sign | (exp << 23) | (2U * frac));
 
 }
 /* 
@@ -327,10 +349,16 @@ int floatFloat2Int(unsigned uf) {
  *   If the result is too small to be represented as a denorm, return
  *   0. If too large, return +INF.
  * 
+ *  solution from here : https://github.com/haohuaijin/CSAPP-Lab/blob/main/1.datalab/bits.c
+ * 
  *   Legal ops: Any integer/unsigned operations incl. ||, &&. Also if, while 
  *   Max ops: 30 
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    int exp;
+    if(x < -126) return 0; //the 2^x is to small.
+    if(x > 128) return 0x7f800000;
+    exp = (x + 127) << 23;
+    return exp;
 }
